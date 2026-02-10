@@ -1,0 +1,48 @@
+package com.simulator.mainapp;
+
+import com.simulator.common.IRateCollector;
+import com.simulator.common.RateFields;
+import com.simulator.common.RateListener;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class PF1RateCollector implements IRateCollector {
+
+    private static final Logger logger = LogManager.getLogger(PF1RateCollector.class);
+
+    private String host = "localhost"; // Default
+    private int port = 5001;           // Default
+    private String subscriberId;
+    private RateListener listener;
+
+    private Socket socket;
+    private PrintWriter out;
+    private BufferedReader in;
+
+    private final ExecutorService readerExecutor = Executors.newSingleThreadExecutor();
+
+    public PF1RateCollector() {
+        // No-arg constructor for dynamic loading
+    }
+    
+    // Optional: Setter methods if we want to inject via factory via reflection, 
+    // but requirement says "read from own config".
+    // I will implement connect to use user/pass if provided, or ignore them.
+    // AND I will overload or add a method to set listener/subscriberId?
+    // IRateCollector doesn't have setListener.
+    // The requirement says: "koordinator sınıfı veri toplayan sınıfları ayağa kaldırırken onlara bir isim vermeli ve callback’ler için kendi referansını geçirmelidir."
+    // So I need a method to set these. simpler: add `init(String name, RateListener listener)` to IRateCollector?
+    // Or cast it in SubscriberFactory.
+    
+    // I should update IRateCollector to include `init` or `setListener`. 
+    // But I already moved IRateCollector to common-lib.
+    // I will update IRateCollector in common-lib first.
+}

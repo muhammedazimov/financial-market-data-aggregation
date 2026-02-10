@@ -1,0 +1,14 @@
+{
+  "direct": {
+    "bid": "{base}{quote}_bid",
+    "ask": "{base}{quote}_ask"
+  },
+  "inverse": {
+    "bid": "1 / {quote}{base}_ask",
+    "ask": "1 / {quote}{base}_bid"
+  },
+  "cross": {
+    "bid": "{base}{anchor}_bid / {quote}{anchor}_ask",
+    "ask": "{base}{anchor}_ask / {quote}{anchor}_bid"
+  }
+}

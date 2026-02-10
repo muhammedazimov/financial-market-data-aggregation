@@ -1,0 +1,12 @@
+<Configuration status="WARN" packages="com.exchange.logging">
+    <Appenders>
+        <OpenSearchAppender name="OpenSearchAppender"
+                            indexName="db-consumer-logs"
+                            serviceName="db-consumer"/>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="OpenSearchAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>

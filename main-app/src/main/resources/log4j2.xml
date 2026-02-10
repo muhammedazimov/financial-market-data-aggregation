@@ -1,0 +1,13 @@
+<Configuration status="WARN" packages="com.exchange.logging">
+    <Appenders>
+        <OpenSearchAppender name="OpenSearchAppender"
+                            indexName="main-app-logs"
+                            serviceName="main-app"
+                            host="${env:OPENSEARCH_HOST:-localhost}"/>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="OpenSearchAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>

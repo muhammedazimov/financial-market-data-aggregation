@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: exchange_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  pf1-simulator:
+    build: ./pf1-simulator
+    container_name: pf1-simulator
+    ports:
+      - "5001:5001"
+
+  pf2-simulator:
+    build: ./pf2-simulator
+    container_name: pf2-simulator
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_PORT=8080
+
+  main-app:
+    build: ./main-app
+    container_name: main-app
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      pf1-simulator:
+        condition: service_started
+      pf2-simulator:
+        condition: service_started
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - PF1_HOST=pf1-simulator
+      - PF2_HOST=pf2-simulator
+      - OPENSEARCH_HOST=opensearch
+      - START_SIMULATORS=false
+    # We need to ensure config.properties inside image picks up these values 
+    # OR Main.java privileges env vars over config.properties.
+    # Currently Main.java reads config.properties and then reads env vars? 
+    # No, Main.java reads config.properties.
+    # I need to update Main.java to allow overriding via Env Vars or update config.properties in Dockerfile.
+    # Or rely on standard Java properties override if supported... Main.java uses Properties.load(). It does NOT check env vars automatically.
+    # Refactoring Main.java to check Env Vars for critical config is needed.
+
+  db-consumer:
+    build: ./db-consumer
+    container_name: db-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      opensearch:
+        condition: service_started
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/exchange_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - OPENSEARCH_URIS=http://opensearch:9200
+
+volumes:
+  postgres-data:
